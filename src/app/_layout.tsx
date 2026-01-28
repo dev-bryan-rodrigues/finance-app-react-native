@@ -1,29 +1,29 @@
-import { initializeDatabase } from '@/database/initializeDatabase';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { SQLiteProvider } from 'expo-sqlite';
-import { View } from 'react-native';
-import useLoadFonts from '../../hooks/useLoadFonts';
+import { drizzle } from "drizzle-orm/expo-sqlite";
+import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
+import { Stack } from "expo-router";
+import { SQLiteProvider, openDatabaseSync } from "expo-sqlite";
+import { Suspense } from "react";
+import { ActivityIndicator } from "react-native";
+import migrations from "../../drizzle/migrations";
 
-SplashScreen.preventAutoHideAsync();
+export const DATABASE_NAME = "finances";
 
-export default function Layout (){
-  const { fontsLoaded, onLayoutRootView } = useLoadFonts();
-
-  if (!fontsLoaded) {
-    return null;
-  }
+export default function RootLayout() {
+  const expoDb = openDatabaseSync(DATABASE_NAME);
+  const db = drizzle(expoDb);
+  const { success, error } = useMigrations(db, migrations);
 
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+    <Suspense fallback={<ActivityIndicator size="large" />}>
       <SQLiteProvider
-        databaseName="sqlite.db"
-        onInit={initializeDatabase}
+        databaseName={DATABASE_NAME}
+        options={{ enableChangeListener: true }}
+        useSuspense
       >
-        <Stack >
+        <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
       </SQLiteProvider>
-    </View>
-  )
+    </Suspense>
+  );
 }
